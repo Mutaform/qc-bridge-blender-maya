@@ -1,55 +1,66 @@
 # QC Bridge Blender-Maya
 
-QC Bridge Maya-Blender by Mutaform is a two-part pipeline tool:
+`QC Bridge Maya-Blender by Mutaform` состоит из двух частей:
 
 - Blender extension: `mutaform_bridge/`
-- Maya companion files: `maya/mutaform_bridge/`
+- файлы для Maya: `maya/mutaform_bridge/`
 
-## Blender Install
+Blender-часть устанавливается как обычный Blender Extension через ссылку на репозиторий. Maya-часть нужно скачать отдельным архивом и положить в папку scripts.
 
-Add the extension repository URL in Blender:
+## Установка в Blender
+
+Добавьте в Blender ссылку на extension repository:
 
 ```text
 https://mutaform.github.io/qc-bridge-blender-maya/index.json
 ```
 
-Then sync repositories and install `QC Bridge Maya-Blender by Mutaform`.
+Затем синхронизируйте репозитории и установите:
 
-## Maya Install
+```text
+QC Bridge Maya-Blender by Mutaform
+```
 
-Download the current Maya archive:
+## Установка в Maya
+
+Скачайте актуальный архив для Maya:
 
 [mutaform_bridge_maya_v1.zip](https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya_v1.zip)
 
-1. Close Maya.
-2. Extract `mutaform_bridge_maya_v1.zip`.
-3. Inside the archive there is a folder named `mutaform_bridge`.
-4. Copy that folder to your Maya scripts folder:
+1. Закройте Maya.
+2. Распакуйте архив `mutaform_bridge_maya_v1.zip`.
+3. Внутри архива будет папка:
 
 ```text
-C:\Users\YOUR_WINDOWS_USER\Documents\maya\2025\scripts\
+mutaform_bridge
 ```
 
-The final folder should look like this:
+4. Эту папку нужно положить сюда:
 
 ```text
-C:\Users\YOUR_WINDOWS_USER\Documents\maya\2025\scripts\mutaform_bridge\
+C:\Users\ИМЯ_ПОЛЬЗОВАТЕЛЯ\Documents\maya\2025\scripts\
 ```
 
-5. Start Maya.
-6. Open Script Editor:
+В итоге должно получиться так:
+
+```text
+C:\Users\ИМЯ_ПОЛЬЗОВАТЕЛЯ\Documents\maya\2025\scripts\mutaform_bridge\
+```
+
+5. Запустите Maya.
+6. Откройте Script Editor:
 
 ```text
 Windows > General Editors > Script Editor
 ```
 
-7. Go to the Python tab.
-8. Paste this code, replacing `YOUR_WINDOWS_USER` with your Windows user name:
+7. Перейдите на вкладку Python.
+8. Вставьте туда код:
 
 ```python
 import sys
 
-path = r"C:\Users\YOUR_WINDOWS_USER\Documents\maya\2025\scripts\mutaform_bridge"
+path = r"C:\Users\ИМЯ_ПОЛЬЗОВАТЕЛЯ\Documents\maya\2025\scripts\mutaform_bridge"
 if path not in sys.path:
     sys.path.append(path)
 
@@ -57,7 +68,9 @@ import install_shelf_button
 install_shelf_button.install()
 ```
 
-For example:
+9. Замените `ИМЯ_ПОЛЬЗОВАТЕЛЯ` на имя пользователя Windows.
+
+Например:
 
 ```python
 import sys
@@ -70,33 +83,43 @@ import install_shelf_button
 install_shelf_button.install()
 ```
 
-9. Press `Ctrl + Enter`.
+10. Нажмите `Ctrl + Enter`.
 
-After that, the `QC Bridge` button appears on the `Poly Modeling` shelf. It uses the Mutaform logo and opens the addon window.
+После этого кнопка `QC Bridge` появится на shelf `Poly Modeling`. Это кнопка с логотипом Mutaform. При нажатии открывается окно аддона.
 
-## Build Blender Release ZIP
+## Ссылки
 
-From the repository root:
+Blender repository index:
+
+[https://mutaform.github.io/qc-bridge-blender-maya/index.json](https://mutaform.github.io/qc-bridge-blender-maya/index.json)
+
+Maya archive:
+
+[https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya_v1.zip](https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya_v1.zip)
+
+## Сборка Blender ZIP
+
+Из корня репозитория:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/build_release.ps1
 ```
 
-The release archive will be written to:
+Готовый архив будет создан здесь:
 
 ```text
 dist/mutaform_bridge_blender.zip
 ```
 
-## Repository Layout
+## Структура репозитория
 
 ```text
-mutaform_bridge/       Blender extension source
-maya/mutaform_bridge/  Maya companion source
-downloads/             Downloadable Maya archive
-tools/                 Release build scripts
+mutaform_bridge/       исходники Blender extension
+maya/mutaform_bridge/  исходники Maya companion
+downloads/             скачиваемый Maya archive
+tools/                 скрипты сборки
 ```
 
-## License
+## Лицензия
 
-This project is licensed under GPL-3.0-or-later, matching the Blender Extension manifest.
+GPL-3.0-or-later, как указано в Blender Extension manifest.
