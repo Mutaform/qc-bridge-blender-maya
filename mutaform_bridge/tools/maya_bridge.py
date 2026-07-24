@@ -10,14 +10,16 @@ from .maya_bridge_helpers import (
     QC_MATRIX_KEY,
     _clear_mesh_creases_temporarily,
     _collection_roots,
+    _default_suzanne_names,
     _empty_roots,
+    _exclude_default_suzanne,
     _exchange_path,
     _find_layer_collection,
     _format_fix_report,
     _format_scene_report,
     _objects_with_children,
+    _remove_new_default_suzanne,
     _restore_mesh_creases,
-    _scene_empty_roots,
     _select_only,
     _set_report,
     auto_fix_scene,
@@ -143,40 +145,34 @@ class MUTAFORMBRIDGE_OT_receive_from_maya(bpy.types.Operator):
 
 class MUTAFORMBRIDGE_OT_send_scene_to_maya(bpy.types.Operator):
     bl_idname = "mutaform_bridge.send_scene_to_maya"
-    bl_label = "Send Scene To Maya"
-    bl_description = "Pack collections into Maya-style empties and export exchange FBX"
+    bl_label = "Export Selected To Maya"
+    bl_description = "Export selected Blender objects to the exchange FBX"
     bl_options = {"REGISTER", "UNDO"}
-
-    pack_before_export: bpy.props.BoolProperty(
-        name="Pack Collections",
-        description="Convert collections to Maya-style empties before export",
-        default=True,
-    )
 
     def execute(self, context):
         path = _exchange_path(context)
         props = context.scene.mutaform_bridge
-        pre_fix = auto_fix_scene(context)
         selection = list(context.selected_objects)
+        if not selection:
+            _set_report(context, "Export selected failed: select objects to export.")
+            self.report({"WARNING"}, "Select objects to export.")
+            return {"CANCELLED"}
         previous_active = context.view_layer.objects.active
-        active_coll = context.view_layer.active_layer_collection.collection
-        active_coll_name = active_coll.name
-        packed_roots = []
-        if self.pack_before_export:
-            if _scene_empty_roots(context):
-                roots = []
-            else:
-                roots = _collection_roots(context)
-            if roots:
-                stats = pack_collections_to_maya(context, roots)
-                packed_roots = stats["root_empties"]
-        export_objects = list(context.scene.objects)
+        suzanne_before = _default_suzanne_names()
+        export_objects = _exclude_default_suzanne(_objects_with_children(selection))
+        if not export_objects:
+            _set_report(context, "Export selected failed: nothing to export.")
+            self.report({"WARNING"}, "Nothing to export.")
+            return {"CANCELLED"}
+        pre_fix = auto_fix_scene(context, objects=export_objects, collections=[])
+        export_objects = _exclude_default_suzanne([obj for obj in export_objects if obj.name in bpy.data.objects])
         material_slot_backups, export_material_pairs = _prepare_export_materials(export_objects)
         crease_backups = [] if props.export_creases else _clear_mesh_creases_temporarily(export_objects)
+        _select_only(context, export_objects)
         try:
             bpy.ops.export_scene.fbx(
                 filepath=path,
-                use_selection=False,
+                use_selection=True,
                 object_types={"EMPTY", "MESH"},
                 mesh_smooth_type="EDGE",
                 add_leaf_bones=False,
@@ -185,27 +181,23 @@ class MUTAFORMBRIDGE_OT_send_scene_to_maya(bpy.types.Operator):
         finally:
             _restore_mesh_creases(crease_backups)
             _restore_export_materials(material_slot_backups, export_material_pairs)
-            if packed_roots:
-                unpack_maya_to_collections(context, packed_roots, bake_transforms=True)
-                restored_layer = _find_layer_collection(context.view_layer.layer_collection, active_coll_name)
-                if restored_layer:
-                    context.view_layer.active_layer_collection = restored_layer
+            _remove_new_default_suzanne(suzanne_before)
             _select_only(context, selection)
             if previous_active and previous_active.name in bpy.data.objects:
                 context.view_layer.objects.active = previous_active
         check = scene_report(context)
         message = (
-            f"Sent scene: {os.path.basename(path)}, {len(bpy.data.objects)} objects; "
+            f"Exported selected: {os.path.basename(path)}, {len(export_objects)} objects; "
             f"{_format_fix_report(pre_fix)}. {_format_scene_report(check)}"
         )
-        self.report({"INFO"}, f"Sent to Maya: {path}")
+        self.report({"INFO"}, f"Exported selected to Maya: {path}")
         _set_report(context, message)
         return {"FINISHED"}
 
 
 class MUTAFORMBRIDGE_OT_send_selection_to_maya(bpy.types.Operator):
     bl_idname = "mutaform_bridge.send_selection_to_maya"
-    bl_label = "Send Selected Collection To Maya"
+    bl_label = "Export Selected Collection To Maya"
     bl_description = "Export the active Blender collection to the exchange FBX"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -217,6 +209,7 @@ class MUTAFORMBRIDGE_OT_send_selection_to_maya(bpy.types.Operator):
         previous_active = context.view_layer.objects.active
         active_coll = context.view_layer.active_layer_collection.collection
         active_coll_name = active_coll.name
+        suzanne_before = _default_suzanne_names()
         scene_root = context.scene.collection
         if active_coll == scene_root:
             _set_report(context, "Send collection failed: select a collection in the Outliner.")
@@ -235,7 +228,7 @@ class MUTAFORMBRIDGE_OT_send_selection_to_maya(bpy.types.Operator):
             _set_report(context, "Send collection failed: nothing to export.")
             self.report({"WARNING"}, "Nothing to export.")
             return {"CANCELLED"}
-        export_objects = _objects_with_children(export_selection)
+        export_objects = _exclude_default_suzanne(_objects_with_children(export_selection))
         _select_only(context, export_objects)
         material_slot_backups, export_material_pairs = _prepare_export_materials(export_objects)
         crease_backups = [] if props.export_creases else _clear_mesh_creases_temporarily(export_objects)
@@ -251,6 +244,7 @@ class MUTAFORMBRIDGE_OT_send_selection_to_maya(bpy.types.Operator):
         finally:
             _restore_mesh_creases(crease_backups)
             _restore_export_materials(material_slot_backups, export_material_pairs)
+            _remove_new_default_suzanne(suzanne_before)
             if packed_roots:
                 unpack_maya_to_collections(context, packed_roots, bake_transforms=True)
                 restored_layer = _find_layer_collection(context.view_layer.layer_collection, active_coll_name)
@@ -324,8 +318,8 @@ class MayaBridgeTool(QCTool):
         op = col.operator(MUTAFORMBRIDGE_OT_receive_from_maya.bl_idname, text="Import From Maya", icon="IMPORT")
         op.clear_scene = False
         row = col.row(align=True)
-        row.operator(MUTAFORMBRIDGE_OT_send_scene_to_maya.bl_idname, text="Send Scene", icon="EXPORT")
-        row.operator(MUTAFORMBRIDGE_OT_send_selection_to_maya.bl_idname, text="Send Selected Collection", icon="OUTLINER_COLLECTION")
+        row.operator(MUTAFORMBRIDGE_OT_send_scene_to_maya.bl_idname, text="Export Selected", icon="EXPORT")
+        row.operator(MUTAFORMBRIDGE_OT_send_selection_to_maya.bl_idname, text="Export Selected Collection", icon="OUTLINER_COLLECTION")
 
         layout.separator()
         advanced = layout.row(align=True)

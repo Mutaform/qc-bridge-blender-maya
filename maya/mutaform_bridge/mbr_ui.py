@@ -9,6 +9,7 @@ import maya.cmds as cmds
 
 import mbr_core as core
 import mbr_io
+import mbr_scene
 from mbr_core import (
     DEFAULT_EXCHANGE_DIR,
     DEFAULT_EXCHANGE_NAME,
@@ -20,7 +21,22 @@ WINDOW_TITLE = "QC Bridge Maya-Blender by Mutaform"
 
 
 def _selected_roots() -> list[str]:
-    return cmds.ls(selection=True, long=True) or []
+    selection = cmds.ls(selection=True, long=True, flatten=True) or []
+    roots: list[str] = []
+    seen: set[str] = set()
+    for item in selection:
+        node = item.split(".", 1)[0]
+        if not cmds.objExists(node):
+            continue
+        if cmds.nodeType(node) == "transform":
+            transform = node
+        else:
+            parents = cmds.listRelatives(node, parent=True, fullPath=True) or []
+            transform = parents[0] if parents else node
+        if transform not in seen:
+            roots.append(transform)
+            seen.add(transform)
+    return roots
 
 
 def show_ui() -> None:
@@ -75,6 +91,10 @@ def show_ui() -> None:
     unlock_box = cmds.checkBox(label="Unlock transforms", value=True)
     clean_history_box = cmds.checkBox(label="Clean geometry history", value=True)
     rebuild_materials_box = cmds.checkBox(label="Rebuild Blinn materials", value=True)
+    cmds.setParent("..")
+    cmds.rowLayout(numberOfColumns=2, columnWidth2=(230, 230), adjustableColumn=2, columnAttach=[(1, "both", 0), (2, "both", 0)])
+    cmds.button(label="Find Random Sharp", height=28, command=lambda *_args: find_random_sharp_clicked())
+    cmds.button(label="Fix Random Sharp", height=28, command=lambda *_args: fix_random_sharp_clicked())
     cmds.setParent("..")
     cmds.setParent("..")
 
@@ -171,6 +191,38 @@ def show_ui() -> None:
             cmds.inViewMessage(amg=f"{WINDOW_TITLE}: {message}", pos="midCenter", fade=True)
         except Exception as exc:
             _set_report(f"Export failed: {exc}")
+            cmds.warning(str(exc))
+            cmds.text(status, edit=True, label=str(exc))
+            cmds.text(last_report, edit=True, label=core.LAST_REPORT)
+
+    def _advanced_roots() -> list[str] | None:
+        roots = _selected_roots()
+        return roots or None
+
+    def find_random_sharp_clicked(*_args: Any) -> None:
+        try:
+            result = mbr_scene.find_random_sharp_edges(roots=_advanced_roots(), select_edges=True)
+            message = f"Random Sharp: {result['edges']} edge(s) found."
+            _set_report(message)
+            cmds.text(status, edit=True, label=message)
+            cmds.text(last_report, edit=True, label=core.LAST_REPORT)
+            cmds.inViewMessage(amg=f"{WINDOW_TITLE}: {message}", pos="midCenter", fade=True)
+        except Exception as exc:
+            _set_report(f"Find Random Sharp failed: {exc}")
+            cmds.warning(str(exc))
+            cmds.text(status, edit=True, label=str(exc))
+            cmds.text(last_report, edit=True, label=core.LAST_REPORT)
+
+    def fix_random_sharp_clicked(*_args: Any) -> None:
+        try:
+            result = mbr_scene.fix_random_sharp_edges(roots=_advanced_roots(), select_edges=True)
+            message = f"Random Sharp fixed: {result['fixed']} edge(s), {result['failed']} failed."
+            _set_report(message)
+            cmds.text(status, edit=True, label=message)
+            cmds.text(last_report, edit=True, label=core.LAST_REPORT)
+            cmds.inViewMessage(amg=f"{WINDOW_TITLE}: {message}", pos="midCenter", fade=True)
+        except Exception as exc:
+            _set_report(f"Fix Random Sharp failed: {exc}")
             cmds.warning(str(exc))
             cmds.text(status, edit=True, label=str(exc))
             cmds.text(last_report, edit=True, label=core.LAST_REPORT)

@@ -10,7 +10,7 @@ from typing import Any
 
 import maya.cmds as cmds
 import maya.mel as mel
-BRIDGE_VERSION = "1.1.1"
+BRIDGE_VERSION = "1.1.3"
 BRIDGE_VERSION_LABEL = f"ver {BRIDGE_VERSION}"
 DEFAULT_EXCHANGE_DIR = os.path.join(os.path.expanduser("~"), "Documents", "MutaformBridge")
 DEFAULT_EXCHANGE_NAME = "mutaform_bridge.fbx"
@@ -410,6 +410,6 @@ def _configure_fbx_import_options() -> None:
     mel.eval("FBXResetImport")
     mel.eval("FBXImportHardEdges -v true")
     mel.eval("FBXImportSmoothingGroups -v true")
-    mel.eval("FBXImportUnlockNormals -v true")
+    mel.eval("FBXImportUnlockNormals -v false")
 
 

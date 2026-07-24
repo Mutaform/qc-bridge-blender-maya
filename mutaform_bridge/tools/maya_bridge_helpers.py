@@ -119,6 +119,29 @@ def _mesh_objects(objects):
     return [obj for obj in objects if obj.type == "MESH" and obj.data]
 
 
+def _is_default_suzanne(obj):
+    if not obj or obj.type != "MESH" or not obj.data:
+        return False
+    return obj.name.startswith("Suzanne") and obj.data.name.startswith("Suzanne")
+
+
+def _default_suzanne_names():
+    return {obj.name for obj in bpy.data.objects if _is_default_suzanne(obj)}
+
+
+def _remove_new_default_suzanne(before_names):
+    removed = 0
+    for obj in list(bpy.data.objects):
+        if _is_default_suzanne(obj) and obj.name not in before_names:
+            bpy.data.objects.remove(obj, do_unlink=True)
+            removed += 1
+    return removed
+
+
+def _exclude_default_suzanne(objects):
+    return [obj for obj in objects if not _is_default_suzanne(obj)]
+
+
 def _objects_with_children(objects):
     result = set(objects)
     stack = list(objects)

@@ -8,7 +8,7 @@ import bpy
 
 from .tools import TOOL_MODULES
 
-BRIDGE_VERSION = "1.1.1"
+BRIDGE_VERSION = "1.1.3"
 BRIDGE_VERSION_LABEL = f"ver {BRIDGE_VERSION}"
 
 
