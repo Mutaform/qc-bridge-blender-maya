@@ -115,6 +115,61 @@ def _texture_file_attrs(file_node: str | None) -> dict[str, Any]:
     return attrs
 
 
+def _file_from_texture_metadata(
+    metadata: dict[str, Any] | None,
+    material_name: str,
+    kind: str,
+) -> str | None:
+    """Create a Maya file node when FBX omitted a Blender texture connection."""
+    if not isinstance(metadata, dict):
+        return None
+    texture_path = metadata.get("fileTextureName")
+    if not isinstance(texture_path, str) or not texture_path:
+        return None
+    try:
+        safe_name = _safe_node_name(material_name)
+        file_node = cmds.shadingNode(
+            "file",
+            asTexture=True,
+            name=f"{safe_name}_{kind}_texture",
+        )
+        place_node = cmds.shadingNode(
+            "place2dTexture",
+            asUtility=True,
+            name=f"{safe_name}_{kind}_place2d",
+        )
+        for attr in (
+            "coverage",
+            "translateFrame",
+            "rotateFrame",
+            "mirrorU",
+            "mirrorV",
+            "stagger",
+            "wrapU",
+            "wrapV",
+            "repeatUV",
+            "offset",
+            "rotateUV",
+            "noiseUV",
+            "vertexUvOne",
+            "vertexUvTwo",
+            "vertexUvThree",
+            "vertexCameraOne",
+        ):
+            cmds.connectAttr(f"{place_node}.{attr}", f"{file_node}.{attr}", force=True)
+        cmds.connectAttr(f"{place_node}.outUV", f"{file_node}.uvCoord", force=True)
+        cmds.connectAttr(f"{place_node}.outUvFilterSize", f"{file_node}.uvFilterSize", force=True)
+        cmds.setAttr(f"{file_node}.fileTextureName", texture_path, type="string")
+        if kind == "normal":
+            if cmds.objExists(f"{file_node}.ignoreColorSpaceFileRules"):
+                cmds.setAttr(f"{file_node}.ignoreColorSpaceFileRules", True)
+            if cmds.objExists(f"{file_node}.colorSpace"):
+                cmds.setAttr(f"{file_node}.colorSpace", "Raw", type="string")
+        return file_node
+    except Exception:
+        return None
+
+
 def _shader_display_attrs(shader: str) -> dict[str, Any]:
     attrs: dict[str, Any] = {}
     for attr in (
@@ -252,9 +307,7 @@ def _connect_file_to_blinn(
         if kind == "diffuse":
             cmds.connectAttr(f"{file_node}.outColor", f"{blinn}.color", force=True)
         elif kind == "opacity":
-            reverse = cmds.shadingNode("reverse", asUtility=True, name=f"{blinn}_opacity_reverse")
-            cmds.connectAttr(f"{file_node}.outColor", f"{reverse}.input", force=True)
-            cmds.connectAttr(f"{reverse}.output", f"{blinn}.transparency", force=True)
+            cmds.connectAttr(f"{file_node}.outTransparency", f"{blinn}.transparency", force=True)
         elif kind == "normal":
             if cmds.objExists(f"{file_node}.ignoreColorSpaceFileRules"):
                 cmds.setAttr(f"{file_node}.ignoreColorSpaceFileRules", True)
@@ -281,6 +334,21 @@ def _disconnect_inputs(node: str, attrs: tuple[str, ...]) -> None:
         for source in cmds.listConnections(plug, source=True, destination=False, plugs=True) or []:
             try:
                 cmds.disconnectAttr(source, plug)
+            except Exception:
+                pass
+
+
+def _remove_transparency_reverse_nodes(blinn: str) -> None:
+    """Remove reverse nodes created by older bridge versions."""
+    plug = f"{blinn}.transparency"
+    sources = cmds.listConnections(plug, source=True, destination=False) or []
+    _disconnect_inputs(blinn, ("transparency",))
+    reverse_nodes = set(sources)
+    reverse_nodes.update(cmds.ls(f"{blinn}_opacity_reverse*", type="reverse") or [])
+    for source in reverse_nodes:
+        if cmds.objExists(source) and cmds.nodeType(source) == "reverse":
+            try:
+                cmds.delete(source)
             except Exception:
                 pass
 
@@ -366,6 +434,9 @@ def normalize_materials_to_blinn(
         base_name = _clean_material_name(old_shader)
         mat_metadata = _material_metadata_for_name(metadata_by_name, base_name)
         texture_metadata = mat_metadata.get("textures", {}) if isinstance(mat_metadata, dict) else {}
+        diffuse_file = diffuse_file or _file_from_texture_metadata(texture_metadata.get("diffuse"), base_name, "diffuse")
+        normal_file = normal_file or _file_from_texture_metadata(texture_metadata.get("normal"), base_name, "normal")
+        opacity_file = opacity_file or _file_from_texture_metadata(texture_metadata.get("opacity"), base_name, "opacity")
         if cmds.nodeType(old_shader) == "blinn":
             blinn = old_shader
             if _leaf(blinn) != base_name:
@@ -383,6 +454,7 @@ def normalize_materials_to_blinn(
             except Exception:
                 pass
 
+        _remove_transparency_reverse_nodes(blinn)
         _disconnect_inputs(blinn, ("color", "transparency", "normalCamera", "diffuse", "specularColor"))
         cmds.setAttr(f"{blinn}.color", *DEFAULT_BLINN_COLOR, type="double3")
         cmds.setAttr(f"{blinn}.transparency", 0.0, 0.0, 0.0, type="double3")

@@ -10,6 +10,8 @@ from .maya_bridge_helpers import (
     QC_MATRIX_KEY,
     _clear_mesh_creases_temporarily,
     _collection_roots,
+    _collection_tree,
+    _collection_tree_objects,
     _default_suzanne_names,
     _empty_roots,
     _exclude_default_suzanne,
@@ -27,7 +29,11 @@ from .maya_bridge_helpers import (
     scene_report,
     unpack_maya_to_collections,
 )
-from .maya_bridge_materials import _prepare_export_materials, _restore_export_materials
+from .maya_bridge_materials import (
+    _prepare_export_materials,
+    _restore_export_materials,
+    write_export_material_sidecar,
+)
 
 class MUTAFORMBRIDGE_OT_convert_from_maya(bpy.types.Operator):
     bl_idname = "mutaform_bridge.convert_from_maya"
@@ -166,7 +172,7 @@ class MUTAFORMBRIDGE_OT_send_scene_to_maya(bpy.types.Operator):
             return {"CANCELLED"}
         pre_fix = auto_fix_scene(context, objects=export_objects, collections=[])
         export_objects = _exclude_default_suzanne([obj for obj in export_objects if obj.name in bpy.data.objects])
-        material_slot_backups, export_material_pairs = _prepare_export_materials(export_objects)
+        material_slot_backups, export_material_pairs, material_metadata = _prepare_export_materials(export_objects)
         crease_backups = [] if props.export_creases else _clear_mesh_creases_temporarily(export_objects)
         _select_only(context, export_objects)
         try:
@@ -178,6 +184,7 @@ class MUTAFORMBRIDGE_OT_send_scene_to_maya(bpy.types.Operator):
                 add_leaf_bones=False,
                 bake_anim=False,
             )
+            write_export_material_sidecar(path, material_metadata)
         finally:
             _restore_mesh_creases(crease_backups)
             _restore_export_materials(material_slot_backups, export_material_pairs)
@@ -204,7 +211,6 @@ class MUTAFORMBRIDGE_OT_send_selection_to_maya(bpy.types.Operator):
     def execute(self, context):
         path = _exchange_path(context)
         props = context.scene.mutaform_bridge
-        pre_fix = auto_fix_scene(context)
         selection = list(context.selected_objects)
         previous_active = context.view_layer.objects.active
         active_coll = context.view_layer.active_layer_collection.collection
@@ -219,6 +225,12 @@ class MUTAFORMBRIDGE_OT_send_selection_to_maya(bpy.types.Operator):
             _set_report(context, "Send collection failed: selected collection is empty.")
             self.report({"WARNING"}, "Selected collection is empty.")
             return {"CANCELLED"}
+        collection_tree = _collection_tree(active_coll)
+        pre_fix = auto_fix_scene(
+            context,
+            objects=_collection_tree_objects(active_coll),
+            collections=collection_tree,
+        )
         export_selection = []
         packed_roots = []
         stats = pack_collections_to_maya(context, [active_coll])
@@ -230,7 +242,7 @@ class MUTAFORMBRIDGE_OT_send_selection_to_maya(bpy.types.Operator):
             return {"CANCELLED"}
         export_objects = _exclude_default_suzanne(_objects_with_children(export_selection))
         _select_only(context, export_objects)
-        material_slot_backups, export_material_pairs = _prepare_export_materials(export_objects)
+        material_slot_backups, export_material_pairs, material_metadata = _prepare_export_materials(export_objects)
         crease_backups = [] if props.export_creases else _clear_mesh_creases_temporarily(export_objects)
         try:
             bpy.ops.export_scene.fbx(
@@ -241,6 +253,7 @@ class MUTAFORMBRIDGE_OT_send_selection_to_maya(bpy.types.Operator):
                 add_leaf_bones=False,
                 bake_anim=False,
             )
+            write_export_material_sidecar(path, material_metadata)
         finally:
             _restore_mesh_creases(crease_backups)
             _restore_export_materials(material_slot_backups, export_material_pairs)

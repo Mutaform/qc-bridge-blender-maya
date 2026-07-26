@@ -1,13 +1,16 @@
 ﻿# SPDX-License-Identifier: GPL-3.0-or-later
 """FBX-friendly material export helpers for Mutaform Bridge."""
 
+import json
+import os
+
 import bpy
 
 def _mesh_objects(objects):
     return [obj for obj in objects if obj.type == "MESH" and obj.data]
 
 
-def _image_from_socket(socket, max_depth=6):
+def _image_connection_from_socket(socket, max_depth=6):
     visited = set()
 
     def walk(sock, depth):
@@ -19,14 +22,19 @@ def _image_from_socket(socket, max_depth=6):
                 continue
             visited.add(node)
             if node.bl_idname == "ShaderNodeTexImage" and node.image:
-                return node.image
+                return node.image, link.from_socket.name
             for input_socket in getattr(node, "inputs", []):
-                image = walk(input_socket, depth + 1)
-                if image:
-                    return image
+                connection = walk(input_socket, depth + 1)
+                if connection:
+                    return connection
         return None
 
     return walk(socket, 0)
+
+
+def _image_from_socket(socket, max_depth=6):
+    connection = _image_connection_from_socket(socket, max_depth=max_depth)
+    return connection[0] if connection else None
 
 
 def _image_role_score(image, role):
@@ -42,8 +50,9 @@ def _image_role_score(image, role):
 
 def _material_export_images(material):
     images = {"diffuse": None, "normal": None, "opacity": None}
+    outputs = {"diffuse": "Color", "normal": "Color", "opacity": "Alpha"}
     if not material or not material.use_nodes or not material.node_tree:
-        return images
+        return images, outputs
 
     nodes = list(material.node_tree.nodes)
     for node in nodes:
@@ -54,7 +63,9 @@ def _material_export_images(material):
                     images["diffuse"] = _image_from_socket(socket)
             socket = node.inputs.get("Alpha")
             if socket and not images["opacity"]:
-                images["opacity"] = _image_from_socket(socket)
+                connection = _image_connection_from_socket(socket)
+                if connection:
+                    images["opacity"], outputs["opacity"] = connection
             socket = node.inputs.get("Normal")
             if socket and not images["normal"]:
                 images["normal"] = _image_from_socket(socket)
@@ -74,10 +85,33 @@ def _material_export_images(material):
         ranked = sorted(texture_images, key=lambda image: _image_role_score(image, role), reverse=True)
         if ranked and (_image_role_score(ranked[0], role) > 0 or role == "diffuse"):
             images[role] = ranked[0]
-    return images
+    return images, outputs
 
 
-def _make_export_material(source_material, images):
+def _image_metadata(image):
+    if not image:
+        return {}
+    path = bpy.path.abspath(image.filepath) if image.filepath else ""
+    return {
+        "node": image.name,
+        "fileTextureName": path,
+    }
+
+
+def _material_metadata(images, outputs):
+    opacity = _image_metadata(images.get("opacity"))
+    if opacity:
+        opacity["output"] = outputs.get("opacity", "Alpha")
+    return {
+        "textures": {
+            "diffuse": _image_metadata(images.get("diffuse")),
+            "normal": _image_metadata(images.get("normal")),
+            "opacity": opacity,
+        }
+    }
+
+
+def _make_export_material(source_material, images, outputs):
     original_name = source_material.name
     source_material.name = f"{original_name}__MBR_ORIGINAL"
     export_material = bpy.data.materials.new(original_name)
@@ -105,8 +139,9 @@ def _make_export_material(source_material, images):
         tex = nodes.new("ShaderNodeTexImage")
         tex.location = (-360, -140)
         tex.image = opacity
-        if "Alpha" in tex.outputs and "Alpha" in principled.inputs:
-            links.new(tex.outputs["Alpha"], principled.inputs["Alpha"])
+        source_socket = tex.outputs.get(outputs.get("opacity", "Alpha")) or tex.outputs.get("Alpha")
+        if source_socket and "Alpha" in principled.inputs:
+            links.new(source_socket, principled.inputs["Alpha"])
             export_material.blend_method = "BLEND"
 
     normal = images.get("normal")
@@ -126,20 +161,33 @@ def _make_export_material(source_material, images):
 def _prepare_export_materials(objects):
     backups = []
     material_map = {}
+    metadata = {}
     for obj in _mesh_objects(objects):
         for slot in obj.material_slots:
             material = slot.material
             if not material:
                 continue
             if material not in material_map:
-                images = _material_export_images(material)
+                images, outputs = _material_export_images(material)
                 if any(images.values()):
-                    material_map[material] = _make_export_material(material, images)
+                    material_map[material] = _make_export_material(material, images, outputs)
+                    metadata[material.name[:-14] if material.name.endswith("__MBR_ORIGINAL") else material.name] = _material_metadata(images, outputs)
             export_material = material_map.get(material)
             if export_material:
                 backups.append((slot, material))
                 slot.material = export_material
-    return backups, list(material_map.items())
+    return backups, list(material_map.items()), {"version": 1, "materials": metadata}
+
+
+def write_export_material_sidecar(fbx_path, material_metadata):
+    """Write Blender texture paths for the Maya material reconstruction pass."""
+    path = os.path.splitext(fbx_path)[0] + ".mbr_materials.json"
+    try:
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(material_metadata, handle, indent=2, sort_keys=True)
+    except OSError:
+        return False
+    return True
 
 
 def _restore_export_materials(slot_backups, material_pairs):

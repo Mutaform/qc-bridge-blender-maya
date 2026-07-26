@@ -194,6 +194,22 @@ def _collection_roots(context):
     return [coll for coll in scene_root.children if coll.objects or coll.children or QC_MATRIX_KEY in coll]
 
 
+def _collection_tree(collection):
+    """Return a collection and every child collection below it."""
+    result = []
+    stack = [collection]
+    while stack:
+        current = stack.pop()
+        result.append(current)
+        stack.extend(current.children)
+    return result
+
+
+def _collection_tree_objects(collection):
+    """Return the objects owned by a collection hierarchy, without scene-wide data."""
+    return list({obj for coll in _collection_tree(collection) for obj in coll.objects})
+
+
 def _collection_parent_map(scene_root):
     parents = {}
     stack = [scene_root]
