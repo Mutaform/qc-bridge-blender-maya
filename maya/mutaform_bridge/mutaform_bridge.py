@@ -25,7 +25,13 @@ from mbr_core import (
 )
 from mbr_io import export_scene_to_blender, export_selected_to_blender, import_fbx_file, import_from_blender
 from mbr_materials import normalize_materials_to_blinn
-from mbr_scene import check_scene, clean_geometry_history, find_random_sharp_edges, fix_random_sharp_edges, unlock_transforms
+from mbr_scene import (
+    check_scene,
+    clean_geometry_history,
+    find_random_sharp_edges,
+    fix_random_sharp_edges,
+    unlock_transforms,
+)
 from mbr_ui import show_ui
 
 __all__ = [

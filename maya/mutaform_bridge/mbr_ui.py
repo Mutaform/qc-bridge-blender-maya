@@ -9,6 +9,7 @@ import maya.cmds as cmds
 
 import mbr_core as core
 import mbr_io
+import mbr_locked_normals
 import mbr_scene
 from mbr_core import (
     DEFAULT_EXCHANGE_DIR,
@@ -109,6 +110,16 @@ def show_ui() -> None:
     exchange_dir = cmds.textFieldGrp(label="Exchange", text=DEFAULT_EXCHANGE_DIR)
     exchange_name = cmds.textFieldGrp(label="FBX", text=DEFAULT_EXCHANGE_NAME)
     cmds.setParent("..")
+    cmds.setParent("..")
+
+    cmds.rowLayout(numberOfColumns=1, columnAttach=(1, "left", 0))
+    cmds.button(
+        label="Unlock\nNormals",
+        width=66,
+        height=50,
+        command=lambda *_args: locked_normals_clicked(),
+        annotation="Convert locked imported normals to Maya soft and hard edges",
+    )
     cmds.setParent("..")
 
     def _path_options() -> dict[str, str]:
@@ -223,6 +234,20 @@ def show_ui() -> None:
             cmds.inViewMessage(amg=f"{WINDOW_TITLE}: {message}", pos="midCenter", fade=True)
         except Exception as exc:
             _set_report(f"Fix Random Sharp failed: {exc}")
+            cmds.warning(str(exc))
+            cmds.text(status, edit=True, label=str(exc))
+            cmds.text(last_report, edit=True, label=core.LAST_REPORT)
+
+    def locked_normals_clicked(*_args: Any) -> None:
+        try:
+            processed = mbr_locked_normals.convert_selected()
+            message = f"Locked normals converted: {processed} mesh(es)."
+            _set_report(message)
+            cmds.text(status, edit=True, label=message)
+            cmds.text(last_report, edit=True, label=core.LAST_REPORT)
+            cmds.inViewMessage(amg=f"{WINDOW_TITLE}: {message}", pos="midCenter", fade=True)
+        except Exception as exc:
+            _set_report(f"Locked normals failed: {exc}")
             cmds.warning(str(exc))
             cmds.text(status, edit=True, label=str(exc))
             cmds.text(last_report, edit=True, label=core.LAST_REPORT)
