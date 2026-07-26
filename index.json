@@ -1,0 +1,28 @@
+{
+  "version": "v1",
+  "blocklist": [],
+  "data": [
+    {
+      "schema_version": "1.0.0",
+      "id": "mutaform_bridge",
+      "name": "QC Bridge Maya-Blender by Mutaform",
+      "tagline": "Studio bridge for Blender and Maya FBX exchange",
+      "version": "1.1.8",
+      "type": "add-on",
+      "maintainer": "Mutaform Studio",
+      "license": [
+        "SPDX:GPL-3.0-or-later"
+      ],
+      "blender_version_min": "4.2.0",
+      "website": "https://mutaform.studio",
+      "tags": [
+        "Pipeline",
+        "Import-Export",
+        "Scene"
+      ],
+      "archive_url": "./mutaform_bridge_blender.zip",
+      "archive_size": 12076,
+      "archive_hash": "sha256:6c48ced0cb29bd2b88cddd7b74185fcb63e97fa4edfa35cdedf652140451418c"
+    }
+  ]
+}
