@@ -1,0 +1,11 @@
+{
+  "id": "mutaform_bridge",
+  "name": "QC Bridge Maya-Blender",
+  "version": "1.3.0",
+  "download": "https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya.zip",
+  "sha256": "7a4247431fd3413a4c3d3d5343a425645bb604847215ff10bb5a8f3aedc5a8db",
+  "notes": "Maya: the bridge is now a dockable panel in the same style as QC Bake and QC Validator for Maya.",
+  "maya": [
+    "2025"
+  ]
+}
