@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Blender operators and UI for Mutaform Bridge."""
 
 import os
@@ -330,9 +330,8 @@ class MayaBridgeTool(QCTool):
         col = layout.column(align=True)
         op = col.operator(MUTAFORMBRIDGE_OT_receive_from_maya.bl_idname, text="Import From Maya", icon="IMPORT")
         op.clear_scene = False
-        row = col.row(align=True)
-        row.operator(MUTAFORMBRIDGE_OT_send_scene_to_maya.bl_idname, text="Export Selected", icon="EXPORT")
-        row.operator(MUTAFORMBRIDGE_OT_send_selection_to_maya.bl_idname, text="Export Selected Collection", icon="OUTLINER_COLLECTION")
+        col.operator(MUTAFORMBRIDGE_OT_send_scene_to_maya.bl_idname, text="Export Selected", icon="EXPORT")
+        col.operator(MUTAFORMBRIDGE_OT_send_selection_to_maya.bl_idname, text="Export Selected Collection", icon="OUTLINER_COLLECTION")
 
         layout.separator()
         advanced = layout.row(align=True)

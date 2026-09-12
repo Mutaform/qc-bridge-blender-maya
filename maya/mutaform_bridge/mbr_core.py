@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Mutaform Bridge - Mutaform Studio
 """Core Maya helpers for Mutaform Bridge."""
 
@@ -10,8 +10,9 @@ from typing import Any
 
 import maya.cmds as cmds
 import maya.mel as mel
-BRIDGE_VERSION = "1.1.8"
-BRIDGE_VERSION_LABEL = f"ver {BRIDGE_VERSION}"
+
+from . import BRIDGE_VERSION, BRIDGE_VERSION_LABEL  # noqa: F401 - re-exported for the older API
+
 DEFAULT_EXCHANGE_DIR = os.path.join(os.path.expanduser("~"), "Documents", "MutaformBridge")
 DEFAULT_EXCHANGE_NAME = "mutaform_bridge.fbx"
 LAST_REPORT = "Ready."

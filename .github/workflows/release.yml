@@ -1,4 +1,4 @@
-name: Build Blender Extension
+name: Build release archives
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Blender extension ZIP
+      - name: Build both archives
         shell: pwsh
         run: tools/build_release.ps1
 
@@ -22,18 +22,18 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mutaform_bridge_blender
-          path: dist/mutaform_bridge_blender.zip
+          path: dist/mutaform_bridge_blender-*.zip
 
       - name: Upload Maya artifact
         uses: actions/upload-artifact@v4
         with:
           name: mutaform_bridge_maya
-          path: downloads/mutaform_bridge_maya_v1.zip
+          path: dist/mutaform_bridge_maya-*.zip
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/mutaform_bridge_blender.zip
-            downloads/mutaform_bridge_maya_v1.zip
+            dist/mutaform_bridge_blender-*.zip
+            dist/mutaform_bridge_maya-*.zip

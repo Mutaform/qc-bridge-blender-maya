@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Material conversion helpers for Mutaform Bridge Maya imports."""
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from typing import Any
 
 import maya.cmds as cmds
 
-from mbr_core import (
+from .mbr_core import (
     TEXTURE_SEARCH_DEPTH,
     _leaf,
     _strip_blender_fbx_suffix,

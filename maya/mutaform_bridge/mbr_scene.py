@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Scene cleanup and validation helpers for Mutaform Bridge in Maya."""
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from typing import Any
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
 
-from mbr_core import _leaf, _set_report, find_empty_candidates, iter_transforms_under
+from .mbr_core import _leaf, _set_report, find_empty_candidates, iter_transforms_under
 
 RANDOM_SHARP_UV_TOLERANCE = 0.001
 

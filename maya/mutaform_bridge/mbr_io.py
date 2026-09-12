@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """FBX import/export commands for Mutaform Bridge in Maya."""
 
 from __future__ import annotations
@@ -9,8 +9,8 @@ from typing import Any
 import maya.cmds as cmds
 import maya.mel as mel
 
-import mbr_core as core
-from mbr_core import (
+from . import mbr_core as core
+from .mbr_core import (
     DEFAULT_EXCHANGE_NAME,
     _configure_fbx_import_options,
     _ensure_fbx_plugin,
@@ -26,14 +26,14 @@ from mbr_core import (
     convert_empties_to_groups,
     exchange_path,
 )
-from mbr_scene import (
+from .mbr_scene import (
     _format_auto_fix,
     _restore_protected_transforms,
     check_scene,
     clean_geometry_history,
     unlock_transforms,
 )
-from mbr_materials import (
+from .mbr_materials import (
     normalize_materials_to_blinn,
     read_material_sidecar,
     write_material_sidecar,

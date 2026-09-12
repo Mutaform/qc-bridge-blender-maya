@@ -5,7 +5,7 @@
 - Blender extension: `mutaform_bridge/`
 - файлы для Maya: `maya/mutaform_bridge/`
 
-Blender-часть устанавливается как обычный Blender Extension через ссылку на репозиторий. Maya-часть нужно скачать отдельным архивом и положить в папку scripts.
+Blender-часть устанавливается как обычный Blender Extension через ссылку на репозиторий. Maya-часть скачивается отдельным архивом и ставится перетаскиванием `install/install.py` во вьюпорт; дальше она обновляет себя сама.
 
 ## Установка в Blender
 
@@ -21,71 +21,45 @@ https://mutaform.github.io/qc-bridge-blender-maya/index.json
 QC Bridge Maya-Blender by Mutaform
 ```
 
+После включения в шапке 3D Viewport, сразу после кнопок Proportional Editing,
+появится иконка Maya. Нажатие открывает выпадающее меню моста: Import From
+Maya, Export Selected, Export Selected Collection, Convert Scene и Settings.
+В N-панели аддон больше не отображается.
+
 ## Установка в Maya
 
-Скачайте актуальный архив для Maya:
+1. Скачайте [`mutaform_bridge_maya.zip`](https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya.zip)
+2. Распакуйте **туда, где папка останется** — в папку инструментов, на сетевую шару,
+   куда угодно постоянное
+3. Перетащите `install/install.py` из распакованной папки во вьюпорт Maya
 
-[mutaform_bridge_maya_v1.zip](https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya_v1.zip)
+Всё. Установщик пропишет модуль Maya, добавит кнопку **QC Bridge** на полку
+*Mutaform*, уберёт кнопку и копию старой версии 1.1.x из папки `scripts`, если
+они есть, и откроет окно.
 
-1. Закройте Maya.
-2. Распакуйте архив `mutaform_bridge_maya_v1.zip`.
-3. Внутри архива будет папка:
+> **Распакованная папка и есть установка.** Ничего не копируется во внутренние
+> каталоги Maya: файл модуля — это указатель на неё. Поэтому обновление сводится к
+> замене одной папки. Обратная сторона: если папку удалить или перенести,
+> инструмент отвалится — распакуйте заново и перетащите `install.py` ещё раз.
 
-```text
-mutaform_bridge
-```
+Удалить: `install.uninstall()`. Саму папку установщик не трогает.
 
-4. Эту папку нужно положить сюда:
+## Обновления в Maya
 
-```text
-C:\Users\ИМЯ_ПОЛЬЗОВАТЕЛЯ\Documents\maya\2025\scripts\
-```
+В Maya нет репозитория аддонов, поэтому механизм свой — тот же, что в QC Bake for
+Maya. Окно при каждом открытии спрашивает манифест на GitHub Pages, есть ли версия
+новее, и если есть — сообщает об этом сверху. Само ничего не ставит.
 
-В итоге должно получиться так:
+По кнопке **Install** архив скачивается, сверяется с контрольной суммой из
+манифеста, распаковывается, подменяет папку пакета и перезагружает его **без
+перезапуска Maya**. Предыдущая версия хранится, пока новая не загрузится, — так
+сломанный релиз откатывает себя сам.
 
-```text
-C:\Users\ИМЯ_ПОЛЬЗОВАТЕЛЯ\Documents\maya\2025\scripts\mutaform_bridge\
-```
+Проверка идёт в фоновом потоке и молчит при неудаче, если вы её не запрашивали.
+Отключить или запустить вручную: **Settings → Updates**.
 
-5. Запустите Maya.
-6. Откройте Script Editor:
-
-```text
-Windows > General Editors > Script Editor
-```
-
-7. Перейдите на вкладку Python.
-8. Вставьте туда код:
-
-```python
-import sys
-
-path = r"C:\Users\ИМЯ_ПОЛЬЗОВАТЕЛЯ\Documents\maya\2025\scripts\mutaform_bridge"
-if path not in sys.path:
-    sys.path.append(path)
-
-import install_shelf_button
-install_shelf_button.install()
-```
-
-9. Замените `ИМЯ_ПОЛЬЗОВАТЕЛЯ` на имя пользователя Windows.
-
-Например:
-
-```python
-import sys
-
-path = r"C:\Users\denis\Documents\maya\2025\scripts\mutaform_bridge"
-if path not in sys.path:
-    sys.path.append(path)
-
-import install_shelf_button
-install_shelf_button.install()
-```
-
-10. Нажмите `Ctrl + Enter`.
-
-После этого кнопка `QC Bridge` появится на shelf `Poly Modeling`. Это кнопка с логотипом Mutaform. При нажатии открывается окно аддона.
+Blender-половина обновляется штатно: Blender сам видит новую версию в
+репозитории расширений.
 
 ## Ссылки
 
@@ -95,9 +69,13 @@ Blender repository index:
 
 Maya archive:
 
-[https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya_v1.zip](https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya_v1.zip)
+[https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya.zip](https://mutaform.github.io/qc-bridge-blender-maya/mutaform_bridge_maya.zip)
 
-## Сборка Blender ZIP
+Maya update manifest:
+
+[https://mutaform.github.io/qc-bridge-blender-maya/version.json](https://mutaform.github.io/qc-bridge-blender-maya/version.json)
+
+## Сборка
 
 Из корня репозитория:
 
@@ -105,19 +83,41 @@ Maya archive:
 powershell -ExecutionPolicy Bypass -File tools/build_release.ps1
 ```
 
-Готовый архив будет создан здесь:
+Скрипт собирает оба архива и сверяет, что версия в `blender_manifest.toml`,
+`mutaform_bridge/__init__.py` и `maya/mutaform_bridge/__init__.py` одна и та же.
+Локально вывод создаётся рядом с репозиторием, в `Dev\`:
 
 ```text
-dist/mutaform_bridge_blender.zip
+Dev\dist\mutaform_bridge_blender-<версия>.zip
+Dev\dist\mutaform_bridge_maya-<версия>.zip
+Dev\pages\   оба архива под постоянными именами, version.json, index.html
 ```
+
+Копии с версией в имени складываются в `Zip Addon\`, предыдущие версии уходят в
+`Zip Addon\old\`. На CI вывод остаётся в корне чекаута, откуда workflow
+публикует `pages/` в ветку `gh-pages`, добавив туда `index.json` репозитория
+расширений Blender. Манифест обновлений Maya генерируется сборкой, а не пишется
+руками: иначе он рано или поздно начнёт описывать не тот архив, что лежит рядом.
+
+Апдейтер не импортирует Maya и тестируется где угодно, в том числе против
+собранного архива и манифеста:
+
+```bash
+python tests/test_updater.py
+```
+
+`tests/test_install_maya.py` запускается внутри Maya: ставит собранный архив в
+чистую папку, проверяет кнопку, модуль и окно, потом возвращает установку из
+репозитория. Сцену не трогает. Способ запуска — в шапке файла.
 
 ## Структура репозитория
 
 ```text
 mutaform_bridge/       исходники Blender extension
-maya/mutaform_bridge/  исходники Maya companion
-downloads/             скачиваемый Maya archive
-tools/                 скрипты сборки
+maya/mutaform_bridge/  пакет Maya companion
+maya/install/          установщик Maya (перетащить во вьюпорт)
+tests/                 тесты апдейтера и установки
+tools/                 скрипт сборки
 ```
 
 ## Лицензия
