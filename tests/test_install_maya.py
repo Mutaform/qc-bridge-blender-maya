@@ -67,13 +67,13 @@ def _forget_everything():
     Only our own button is removed from the Mutaform shelf: other studio
     tools live there too.
     """
-    if "mutaform_bridge.mbr_ui" in sys.modules:
+    if "mutaform_bridge.ui.panel" in sys.modules:
         try:
-            sys.modules["mutaform_bridge.mbr_ui"].close()
+            sys.modules["mutaform_bridge.ui.panel"].close()
         except Exception:
             pass
-    if cmds.window("mutaformBridgeWindow", exists=True):
-        cmds.deleteUI("mutaformBridgeWindow")
+    if cmds.workspaceControl("MutaformBridgePanelWorkspaceControl", query=True, exists=True):
+        cmds.deleteUI("MutaformBridgePanelWorkspaceControl")
     for name in [n for n in list(sys.modules)
                  if n == "mutaform_bridge" or n.startswith("mutaform_bridge.")
                  or n.startswith("mbr_") or n == "install"]:
@@ -149,8 +149,14 @@ def run():
               icon.endswith("qc_maya_bridge_shelf.png"), True)
         check("and that file really shipped", os.path.isfile(icon), True)
 
-        check("the window opened",
-              cmds.window("mutaformBridgeWindow", exists=True), True)
+        check("the panel opened",
+              cmds.workspaceControl("MutaformBridgePanelWorkspaceControl",
+                                    query=True, exists=True), True)
+        from mutaform_bridge.ui import panel as panel_mod
+        check("subscriptions armed", len(panel_mod._running_jobs()), 1)
+        check("the uiScript knows the install root",
+              cmds.optionVar(query="mutaformBridge_install_root"),
+              tool_dir.replace("\\", "/"))
 
         # Loading is not the same as working: a read-only pass over the scene.
         from mutaform_bridge import mbr_scene

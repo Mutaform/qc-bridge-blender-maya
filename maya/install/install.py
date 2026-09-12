@@ -2,7 +2,7 @@
 
 Drag this file into a Maya viewport to install. That writes a module file
 pointing back at wherever this folder sits, adds a QC Bridge button to the
-Mutaform shelf, retires the 1.1.x copy if one is found, and opens the window.
+Mutaform shelf, retires the 1.1.x copy if one is found, and opens the panel.
 
 It can also be run from the script editor:
 
@@ -28,7 +28,12 @@ import maya.mel as mel
 MODULE_NAME = "mutaform_bridge"
 SHELF_NAME = "Mutaform"
 BUTTON_LABEL = "QC Bridge"
-WINDOW = "mutaformBridgeWindow"
+WORKSPACE_CONTROL = "MutaformBridgePanelWorkspaceControl"
+LEGACY_WINDOW = "mutaformBridgeWindow"
+
+# Where the package lives, for the panel's uiScript on a cold start: Maya
+# rebuilds a docked panel before anything has put the folder on sys.path.
+ROOT_OPTIONVAR = "mutaformBridge_install_root"
 
 # What the 1.1.x install left behind: a button under either of these labels on
 # whatever shelf it was put on, a menu in the main window, and the modules
@@ -210,13 +215,14 @@ def add_shelf_button(root=None):
 
 
 def install():
-    """Write the module, add the shelf button, retire 1.1.x, open the window."""
+    """Write the module, add the shelf button, retire 1.1.x, open the panel."""
     root = repo_root()
     if root not in sys.path:
         sys.path.insert(0, root)
 
     legacy = remove_legacy()
     path = write_module(root)
+    cmds.optionVar(stringValue=(ROOT_OPTIONVAR, root.replace("\\", "/")))
     add_shelf_button(root)
 
     # Save the shelf now, or the button is lost if Maya exits uncleanly.
@@ -233,7 +239,7 @@ def install():
 
 
 def uninstall():
-    """Remove the module file, the shelf button and the window. The folder is left."""
+    """Remove the module file, the shelf button and the panel. The folder is left."""
     removed = []
 
     path = module_file()
@@ -250,9 +256,14 @@ def uninstall():
                 removed.append("shelf button")
         mel.eval('saveAllShelves $gShelfTopLevel;')
 
-    if cmds.window(WINDOW, exists=True):
-        cmds.deleteUI(WINDOW)
-        removed.append(WINDOW)
+    if cmds.workspaceControl(WORKSPACE_CONTROL, query=True, exists=True):
+        cmds.deleteUI(WORKSPACE_CONTROL)
+        removed.append(WORKSPACE_CONTROL)
+    if cmds.window(LEGACY_WINDOW, exists=True):
+        cmds.deleteUI(LEGACY_WINDOW)
+        removed.append(LEGACY_WINDOW)
+    if cmds.optionVar(exists=ROOT_OPTIONVAR):
+        cmds.optionVar(remove=ROOT_OPTIONVAR)
 
     print("QC Bridge uninstalled: %s" % (", ".join(removed) or "nothing to remove"))
     return removed

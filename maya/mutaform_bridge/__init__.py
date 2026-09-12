@@ -15,14 +15,15 @@
 #   mbr_locked_normals  locked normals -> Maya soft/hard edges
 #   prefs               settings, persisted in Maya optionVars
 #   updater             the update mechanism, testable without Maya
-#   mbr_ui              the window
+#   icons               every icon the panel uses, by name
+#   ui                  the dockable PySide6 panel (ui.panel) and its widgets
 #
 # The installer (install/install.py) and the updater rely on this file
 # carrying VERSION as the first thing named VERSION: the release build reads
 # it from here, and so does an update before deciding whether to trust an
 # archive.
 
-VERSION = (1, 2, 0)
+VERSION = (1, 3, 0)
 VERSION_STRING = ".".join(str(part) for part in VERSION)
 
 BRIDGE_VERSION = VERSION_STRING
@@ -30,9 +31,9 @@ BRIDGE_VERSION_LABEL = "ver %s" % VERSION_STRING
 
 
 def show():
-    """Open the bridge window. The single public entry point."""
-    from . import mbr_ui
-    return mbr_ui.show_ui()
+    """Open the panel. Idempotent: Maya calls this again to restore a dock."""
+    from .ui import panel
+    return panel.show()
 
 
 # The name the previous shelf button called.

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0
+
+Maya: the bridge is now a dockable panel in the same style as QC Bake and
+QC Validator for Maya. Blender: no changes.
+
+**Maya.** The `maya.cmds` window is replaced by a PySide6 panel that docks
+like the other two studio tools and shares their look: a bold title with the
+version, one primary Import button with the any-FBX variant beside it, a
+coloured status strip carrying the bridge's report, and three collapsible
+sections - Import Options, Tools (Random Sharp, Unlock Normals) and Settings
+(exchange folder with a browse button, FBX name, updates). Import options and
+folded sections are remembered between sessions. The panel restores itself
+when Maya starts with it docked; the update banner and the install flow are
+unchanged.
+
 ## 1.2.0
 
 Maya: drag-and-drop installer and a built-in update check with one-click

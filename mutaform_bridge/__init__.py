@@ -14,7 +14,7 @@ import bpy.utils.previews
 
 from .tools import TOOL_MODULES
 
-BRIDGE_VERSION = "1.2.0"
+BRIDGE_VERSION = "1.3.0"
 BRIDGE_VERSION_LABEL = f"ver {BRIDGE_VERSION}"
 BRIDGE_TITLE = "QC Bridge Maya-Blender"
 

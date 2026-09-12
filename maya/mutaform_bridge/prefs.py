@@ -57,6 +57,13 @@ FIELDS = [
     _Field("exchange_dir", DEFAULT_EXCHANGE_DIR, str),
     _Field("exchange_name", DEFAULT_EXCHANGE_NAME, str),
 
+    # What the import cleanup does. All on by default; an artist who turns
+    # one off keeps it off next time.
+    _Field("import_clean_names", True, bool),
+    _Field("import_unlock_transforms", True, bool),
+    _Field("import_clean_history", True, bool),
+    _Field("import_rebuild_materials", True, bool),
+
     # Updates. Maya has no add-on repository of its own, so the tool checks a
     # manifest we publish and tells the artist - it never installs on its own.
     _Field("update_url",
@@ -111,3 +118,24 @@ _INSTANCE = Settings()
 def load():
     """Return the shared settings object."""
     return _INSTANCE
+
+
+# -----------------------------------------------------------------------------
+# UI state
+# -----------------------------------------------------------------------------
+# Which panel sections are folded open is not a setting the tool acts on, so it
+# stays out of FIELDS - but it is still worth remembering, because re-folding
+# the same sections at the start of every session is exactly the kind of small
+# friction that makes a tool feel unfinished.
+_UI_PREFIX = OPTIONVAR_PREFIX + "ui_"
+
+
+def ui_flag(name, default=True):
+    var = _UI_PREFIX + name
+    if not cmds.optionVar(exists=var):
+        return default
+    return bool(cmds.optionVar(query=var))
+
+
+def set_ui_flag(name, value):
+    cmds.optionVar(intValue=(_UI_PREFIX + name, int(bool(value))))
